@@ -6,19 +6,19 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 
 const registerUser = asyncHandler(async (req, res) => {
     //get users details from frontend 
-    const { fullName, email, userName, password } = req.body
+    const { fullName, email, username, password } = req.body
     console.log("email :", email);
 
     // validate user details
     if (
-        [fullName, email, userName, password].some((field) =>
+        [fullName, email, username, password].some((field) =>
             field?.trim() === "")
     ) {
-        throw new ApiError(400, "Al fields rea required")
+        throw new ApiError(400, "All fields are required")
     }
     //check if user already exists
-    const existedUser = User.findOne({
-        $or: [{ userName }, { email }]
+    const existedUser = await User.findOne({
+        $or: [{ username }, { email }]
     })
 
     if (existedUser) {
@@ -40,13 +40,13 @@ const registerUser = asyncHandler(async (req, res) => {
     const user = await User.create({
         fullName,
         avatar: avatar.url,
-        coverImage:coverImage?.url || "",
+        coverImage:coverImage?.url || "", 
         email,
         password,
-        userName:userName.toLowerCase()
+        username:username.toLowerCase()
     })
     // remove password and refresh token filed from resposne
-    const createdUser = await user.findById(user._id).select(
+    const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
     )
     //check fr user creation
