@@ -68,7 +68,7 @@ userSchema.methods.generateAccessToken = function () {
         },
         process.env.ACCESS_TOKEN_SECRET,
         {
-            expiresIn: ACCES_TOKEN_EXPIRY
+            expiresIn: process.env.ACCES_TOKEN_EXPIRY || "1h"
         }
     )
 }
@@ -80,8 +80,9 @@ userSchema.methods.generateRefreshToken = function () {
         },
         process.env.REFRESH_TOKEN_SECRET,
         {
-            expiresIn: REFRESH_TOKEN_EXPIRY
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d"
         }
     )
 }
 export const User = mongoose.model("User", userSchema)
+

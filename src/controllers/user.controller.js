@@ -3,19 +3,25 @@ import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
+import jwt from "jsonwebtoken"
 
 const generateAccessAndRefereshTokens = async (userId) => {
     try {
         const user = await User.findById(userId)
+        if (!user) {
+            console.error("user not found with ID:", userId);
+
+            throw new ApiError(404, "user not found")
+        }
         const accessToken = user.generateAccessToken()
         const refreshToken = user.generateRefreshToken()
-        user.refreshToken = refreshToken
+        user.refreshToken = refreshToken;
         await user.save({ validateBeforeSave: false })
         return { accessToken, refreshToken }
     } catch (error) {
         throw new ApiError(500, "Failed to generate access and refresh token", error.message)
     }
-}
+};
 
 const registerUser = asyncHandler(async (req, res) => {
     //get users details from frontend 
@@ -44,7 +50,7 @@ const registerUser = asyncHandler(async (req, res) => {
     const avatarLocaPath = req.files?.avatar[0]?.path;
     // const coverImageLocalPath = req.files?.coverImage[0]?.path;
     let coverImageLocalPath;
-    if (req.files && Array.isArray(req.files.coverImage) && req.coverImage.length > 0) {
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
         coverImageLocalPath = req.files.coverImage[0].path
     }
 
@@ -88,7 +94,7 @@ const loginUser = asyncHandler(async (req, res) => {
     // get user details from frontend
     const { email, username, password } = req.body
     // get data username or email and password
-    if (!email || !username) {
+    if (!(email || username)) {
         throw new ApiError(400, "username or email fields are required")
     }
     // find the user existed or not
@@ -138,10 +144,10 @@ const logoutUser = asyncHandler(async (req, res) => {
                 refreshToken: undefined
             }
         },
-            {
+        {
             new: true
         }
-    
+
     )
     const options = {
         httpOnly: true,
@@ -149,16 +155,56 @@ const logoutUser = asyncHandler(async (req, res) => {
     }
 
     return res
-    .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, null, "User logged out successfully"))
+        .status(200)
+        .clearCookie("accessToken", options)
+        .clearCookie("refreshToken", options)
+        .json(new ApiResponse(200, null, "User logged out successfully"))
 
+})
+
+// genrating new refersh  token afte session expiration 
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    const IncomingrefreshToken = req.cookies.refreshToken || req.body.refreshToken
+
+    if (!IncomingrefreshToken) {
+        throw new ApiError(401, "Unauthorized request")
+    }
+
+    try {
+        const decodedToken = jwt.verify(IncomingrefreshToken, process.env.REFRESH_TOKEN_SECRET)
+    
+        const user = await User.findById(decodedToken?._id)
+    
+        if (!user) {
+            throw new ApiError(401, "invalid referesh token request")
+        }
+    
+        // match both te refresh token
+        if (user.refreshToken !== IncomingrefreshToken) {
+            throw new ApiError(401, "invalid referesh token is expired or used")
+        }
+    
+        //if validated then generate new token
+        const options = {
+            httpOnly:true,
+            secure:true,
+        }
+    
+        const { accessToken, refreshToken } = await generateAccessAndRefereshTokens(user._id)
+    
+        return res.status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(new ApiResponse(200, { accessToken }, "Access token refreshed successfully"))
+    } catch (error) {
+        throw new ApiError(401,error?.message || "Invalid refersh token given")
+    }
 })
 
 
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccessToken
 }
