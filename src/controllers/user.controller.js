@@ -349,30 +349,30 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 channlesSubscribedToCount: {
                     $size: "$subscribedTo"
                 },
-                isSubscribed:{
-                    $cond:{
-                        if:{$in:[req.user?._id,"$subscribers.subscriber"]},
-                        then:true,
-                        else:false
+                isSubscribed: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+                        then: true,
+                        else: false
                     }
                 }
             }
         },
         {
             $project: {
-                fullName:1,
-                username:1,
-                subscribersCount:1,
-                channlesSubscribedToCount:1,
-                avatar:1,
-                coverImage:1,
-                isSubscribed:1,
-                email:1
+                fullName: 1,
+                username: 1,
+                subscribersCount: 1,
+                channlesSubscribedToCount: 1,
+                avatar: 1,
+                coverImage: 1,
+                isSubscribed: 1,
+                email: 1
             }
         }
     ])
 
-    if(!channel?.length){
+    if (!channel?.length) {
         throw new ApiError(404, "channel not found")
     }
 
@@ -384,36 +384,38 @@ const getWatchHistory = asyncHandler(async (req, res) => {
     // consvert th eis because its is a string
     const user = await User.aggregate([
         {
-            $match:{
+            $match: {
                 _id: new mongoose.Types.ObjectId(req.user._id)
             }
         },
         {
-            $lookup:{
-                from:"Video",
-                localField:"watchHistory",
-                foreignField:"_id",
-                as:"watchHistory",
-                pipeline:[
+            $lookup: {
+                from: "Video",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
                     {
-                        $lookup:{
-                            from:"User",
-                            localField:"owner",
-                            foreignField:"_id",
-                            as:"owner",
-                            pipeline:[
-                                $project:{
-                                    fullName:1,
-                                    username:1
-                                    avatar:1
+                        $lookup: {
+                            from: "User",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
                                 }
                             ]
                         }
                     },
                     {
-                        $addFields:{
-                            owner:{
-                                $first:"$owner"
+                        $addFields: {
+                            owner: {
+                                $first: "$owner"
                             }
                         }
                     }
@@ -437,5 +439,6 @@ export {
     updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistory
 }
