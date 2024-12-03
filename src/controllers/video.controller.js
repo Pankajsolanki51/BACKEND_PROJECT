@@ -22,10 +22,10 @@ const publishVideo = asyncHandler(async (req,res=>{
         title,
         description,
         videoFile: await uploadOnCloudinary(req.file.path)
-    })
+    }) 
 
     await video.save();
-    res.status(200).json(new ApiResponse(200,video))
+    res.status(200).json(new ApiResponse(200,video,"video saved successfully"))
 }))
 
 export {
